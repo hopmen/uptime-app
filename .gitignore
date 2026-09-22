@@ -1,0 +1,14 @@
+# Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# Go
+backend/bin/
+backend/coverage.out
+
+# Environment and local tooling
+.env
+.env.*
+!.env.example
+.DS_Store
