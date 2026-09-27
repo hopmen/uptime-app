@@ -40,6 +40,7 @@ func NewRepository(db *gorm.DB) *Repository { return &Repository{db: db} }
 type userModel struct {
 	ID           string    `gorm:"type:uuid;primaryKey"`
 	Email        string    `gorm:"uniqueIndex;not null"`
+	Name         string    `gorm:"not null"`
 	PasswordHash string    `gorm:"not null"`
 	CreatedAt    time.Time `gorm:"not null"`
 	UpdatedAt    time.Time `gorm:"not null"`
@@ -88,6 +89,18 @@ func (r *Repository) FindUserByID(ctx context.Context, id string) (auth.User, er
 	return fromUserModel(model), nil
 }
 
+// UpdateUserName persists the display name and update time for a user.
+func (r *Repository) UpdateUserName(ctx context.Context, id, name string, updatedAt time.Time) (auth.User, error) {
+	result := r.db.WithContext(ctx).Model(&userModel{}).Where("id = ?", id).Updates(map[string]any{"name": name, "updated_at": updatedAt})
+	if result.Error != nil {
+		return auth.User{}, result.Error
+	}
+	if result.RowsAffected != 1 {
+		return auth.User{}, auth.ErrNotFound
+	}
+	return r.FindUserByID(ctx, id)
+}
+
 // CreateSession persists a new refresh session.
 func (r *Repository) CreateSession(ctx context.Context, session auth.RefreshSession) error {
 	return r.db.WithContext(ctx).Create(toSessionModel(session)).Error
@@ -116,11 +129,23 @@ func (r *Repository) RotateSession(ctx context.Context, oldHash string, replacem
 	})
 }
 
+// DeleteSessionByTokenHash invalidates a refresh session during logout.
+func (r *Repository) DeleteSessionByTokenHash(ctx context.Context, hash string) error {
+	result := r.db.WithContext(ctx).Where("token_hash = ?", hash).Delete(&refreshSessionModel{})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return auth.ErrNotFound
+	}
+	return nil
+}
+
 func toUserModel(user auth.User) userModel {
-	return userModel{ID: user.ID, Email: user.Email, PasswordHash: user.PasswordHash, CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt}
+	return userModel{ID: user.ID, Email: user.Email, Name: user.Name, PasswordHash: user.PasswordHash, CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt}
 }
 func fromUserModel(model userModel) auth.User {
-	return auth.User{ID: model.ID, Email: model.Email, PasswordHash: model.PasswordHash, CreatedAt: model.CreatedAt, UpdatedAt: model.UpdatedAt}
+	return auth.User{ID: model.ID, Email: model.Email, Name: model.Name, PasswordHash: model.PasswordHash, CreatedAt: model.CreatedAt, UpdatedAt: model.UpdatedAt}
 }
 func toSessionModel(session auth.RefreshSession) refreshSessionModel {
 	return refreshSessionModel{ID: session.ID, UserID: session.UserID, TokenHash: session.TokenHash, ExpiresAt: session.ExpiresAt, CreatedAt: session.CreatedAt}

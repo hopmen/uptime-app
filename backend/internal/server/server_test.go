@@ -66,6 +66,36 @@ func TestRegisterRejectsShortPassword(t *testing.T) {
 	}
 }
 
+func TestLogoutClearsCookieAndInvalidatesSession(t *testing.T) {
+	service := auth.NewService(newTestRepository(), "01234567890123456789012345678901", 15*time.Minute, time.Hour)
+	handler := New(config.Config{FrontendOrigin: "http://localhost:3000", RefreshTokenTTL: time.Hour, CookieSameSite: "lax"}, service)
+
+	register := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", strings.NewReader(`{"email":"person@example.com","password":"password1"}`))
+	registered := httptest.NewRecorder()
+	handler.ServeHTTP(registered, register)
+	cookie := registered.Result().Cookies()[0]
+
+	logout := httptest.NewRequest(http.MethodPost, "/api/v1/auth/logout", nil)
+	logout.AddCookie(cookie)
+	loggedOut := httptest.NewRecorder()
+	handler.ServeHTTP(loggedOut, logout)
+	if loggedOut.Code != http.StatusNoContent {
+		t.Fatalf("logout status = %d: %s", loggedOut.Code, loggedOut.Body.String())
+	}
+	clearedCookie := loggedOut.Result().Cookies()[0]
+	if clearedCookie.Value != "" || clearedCookie.MaxAge >= 0 {
+		t.Fatalf("logout cookie was not cleared: %#v", clearedCookie)
+	}
+
+	refresh := httptest.NewRequest(http.MethodPost, "/api/v1/auth/refresh", nil)
+	refresh.AddCookie(cookie)
+	refreshed := httptest.NewRecorder()
+	handler.ServeHTTP(refreshed, refresh)
+	if refreshed.Code != http.StatusUnauthorized {
+		t.Fatalf("refresh after logout status = %d", refreshed.Code)
+	}
+}
+
 func TestLoginAndAuthenticationErrors(t *testing.T) {
 	service := auth.NewService(newTestRepository(), "01234567890123456789012345678901", 15*time.Minute, time.Hour)
 	handler := New(config.Config{FrontendOrigin: "http://localhost:3000", RefreshTokenTTL: time.Hour, CookieSameSite: "lax"}, service)
@@ -96,6 +126,52 @@ func TestLoginAndAuthenticationErrors(t *testing.T) {
 	handler.ServeHTTP(loginResponse, login)
 	if loginResponse.Code != http.StatusOK {
 		t.Fatalf("login status = %d: %s", loginResponse.Code, loginResponse.Body.String())
+	}
+}
+
+func TestProfileCanBeReadAndNameUpdated(t *testing.T) {
+	service := auth.NewService(newTestRepository(), "01234567890123456789012345678901", 15*time.Minute, time.Hour)
+	handler := New(config.Config{FrontendOrigin: "http://localhost:3000", RefreshTokenTTL: time.Hour, CookieSameSite: "lax"}, service)
+
+	register := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", strings.NewReader(`{"email":"person@example.com","password":"password1"}`))
+	registered := httptest.NewRecorder()
+	handler.ServeHTTP(registered, register)
+	var registration struct {
+		AccessToken string `json:"accessToken"`
+	}
+	if err := json.NewDecoder(registered.Body).Decode(&registration); err != nil {
+		t.Fatal(err)
+	}
+
+	update := httptest.NewRequest(http.MethodPatch, "/api/v1/profile", strings.NewReader(`{"name":"Анна Мария"}`))
+	update.Header.Set("Authorization", "Bearer "+registration.AccessToken)
+	updated := httptest.NewRecorder()
+	handler.ServeHTTP(updated, update)
+	if updated.Code != http.StatusOK {
+		t.Fatalf("update status = %d: %s", updated.Code, updated.Body.String())
+	}
+	var profile struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(updated.Body).Decode(&profile); err != nil {
+		t.Fatal(err)
+	}
+	if profile.Name != "Анна Мария" {
+		t.Fatalf("name = %q", profile.Name)
+	}
+
+	read := httptest.NewRequest(http.MethodGet, "/api/v1/profile", nil)
+	read.Header.Set("Authorization", "Bearer "+registration.AccessToken)
+	readResponse := httptest.NewRecorder()
+	handler.ServeHTTP(readResponse, read)
+	if readResponse.Code != http.StatusOK {
+		t.Fatalf("profile status = %d: %s", readResponse.Code, readResponse.Body.String())
+	}
+	if err := json.NewDecoder(readResponse.Body).Decode(&profile); err != nil {
+		t.Fatal(err)
+	}
+	if profile.Name != "Анна Мария" {
+		t.Fatalf("stored name = %q", profile.Name)
 	}
 }
 
@@ -131,6 +207,16 @@ func (r *testRepository) FindUserByID(_ context.Context, id string) (auth.User, 
 	}
 	return user, nil
 }
+func (r *testRepository) UpdateUserName(_ context.Context, id, name string, updatedAt time.Time) (auth.User, error) {
+	user, ok := r.users[id]
+	if !ok {
+		return auth.User{}, auth.ErrNotFound
+	}
+	user.Name = name
+	user.UpdatedAt = updatedAt
+	r.users[id] = user
+	return user, nil
+}
 func (r *testRepository) CreateSession(_ context.Context, session auth.RefreshSession) error {
 	r.sessions[session.TokenHash] = session
 	return nil
@@ -148,5 +234,12 @@ func (r *testRepository) RotateSession(_ context.Context, hash string, replaceme
 	}
 	delete(r.sessions, hash)
 	r.sessions[replacement.TokenHash] = replacement
+	return nil
+}
+func (r *testRepository) DeleteSessionByTokenHash(_ context.Context, hash string) error {
+	if _, ok := r.sessions[hash]; !ok {
+		return auth.ErrNotFound
+	}
+	delete(r.sessions, hash)
 	return nil
 }

@@ -54,6 +54,21 @@ func TestRefreshRotatesTokenAndRejectsReuse(t *testing.T) {
 	}
 }
 
+func TestLogoutInvalidatesRefreshToken(t *testing.T) {
+	repository := newMemoryRepository()
+	service := NewService(repository, "01234567890123456789012345678901", 15*time.Minute, 30*24*time.Hour)
+	_, pair, err := service.Register(context.Background(), "person@example.com", "password1")
+	if err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	if err := service.Logout(context.Background(), pair.RefreshToken); err != nil {
+		t.Fatalf("logout: %v", err)
+	}
+	if _, err := service.Refresh(context.Background(), pair.RefreshToken); !errors.Is(err, ErrInvalidRefreshToken) {
+		t.Fatalf("refresh after logout error = %v", err)
+	}
+}
+
 func TestValidatePassword(t *testing.T) {
 	if err := ValidatePassword("short"); err == nil {
 		t.Fatal("expected short password error")
@@ -95,6 +110,16 @@ func (r *memoryRepository) FindUserByID(_ context.Context, id string) (User, err
 	}
 	return user, nil
 }
+func (r *memoryRepository) UpdateUserName(_ context.Context, id, name string, updatedAt time.Time) (User, error) {
+	user, ok := r.users[id]
+	if !ok {
+		return User{}, ErrNotFound
+	}
+	user.Name = name
+	user.UpdatedAt = updatedAt
+	r.users[id] = user
+	return user, nil
+}
 func (r *memoryRepository) CreateSession(_ context.Context, session RefreshSession) error {
 	r.sessions[session.TokenHash] = session
 	return nil
@@ -112,5 +137,12 @@ func (r *memoryRepository) RotateSession(_ context.Context, oldHash string, repl
 	}
 	delete(r.sessions, oldHash)
 	r.sessions[replacement.TokenHash] = replacement
+	return nil
+}
+func (r *memoryRepository) DeleteSessionByTokenHash(_ context.Context, hash string) error {
+	if _, ok := r.sessions[hash]; !ok {
+		return ErrNotFound
+	}
+	delete(r.sessions, hash)
 	return nil
 }

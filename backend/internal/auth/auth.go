@@ -21,12 +21,13 @@ var (
 	ErrEmailTaken          = errors.New("email already exists")
 	ErrInvalidRefreshToken = errors.New("invalid refresh token")
 	ErrInvalidCredentials  = errors.New("invalid credentials")
+	ErrInvalidAccessToken  = errors.New("invalid access token")
 )
 
 // User is an authenticated application user.
 type User struct {
-	ID, Email, PasswordHash string
-	CreatedAt, UpdatedAt    time.Time
+	ID, Email, Name, PasswordHash string
+	CreatedAt, UpdatedAt          time.Time
 }
 
 // RefreshSession represents a persisted refresh-token session.
@@ -40,9 +41,11 @@ type Repository interface {
 	CreateUserWithSession(context.Context, User, RefreshSession) error
 	FindUserByEmail(context.Context, string) (User, error)
 	FindUserByID(context.Context, string) (User, error)
+	UpdateUserName(context.Context, string, string, time.Time) (User, error)
 	CreateSession(context.Context, RefreshSession) error
 	FindSessionByTokenHash(context.Context, string) (RefreshSession, error)
 	RotateSession(context.Context, string, RefreshSession) error
+	DeleteSessionByTokenHash(context.Context, string) error
 }
 
 // TokenPair is issued after registration, login or refresh.
@@ -136,6 +139,51 @@ func (s *Service) Refresh(ctx context.Context, refreshToken string) (TokenPair, 
 	return pair, nil
 }
 
+// Logout invalidates the refresh token for the current browser session.
+func (s *Service) Logout(ctx context.Context, refreshToken string) error {
+	if refreshToken == "" {
+		return nil
+	}
+
+	err := s.repository.DeleteSessionByTokenHash(ctx, tokenHash(refreshToken))
+	if errors.Is(err, ErrNotFound) {
+		return nil
+	}
+	return err
+}
+
+// AuthenticateAccessToken validates an access token and returns its current user.
+func (s *Service) AuthenticateAccessToken(ctx context.Context, accessToken string) (User, error) {
+	claims := jwt.MapClaims{}
+	token, err := jwt.ParseWithClaims(accessToken, claims, func(token *jwt.Token) (any, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok || token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
+			return nil, ErrInvalidAccessToken
+		}
+		return s.jwtSecret, nil
+	})
+	if err != nil || !token.Valid {
+		return User{}, ErrInvalidAccessToken
+	}
+	userID, ok := claims["sub"].(string)
+	if !ok || userID == "" {
+		return User{}, ErrInvalidAccessToken
+	}
+	user, err := s.repository.FindUserByID(ctx, userID)
+	if err != nil {
+		return User{}, ErrInvalidAccessToken
+	}
+	return user, nil
+}
+
+// UpdateName changes the display name of an existing user.
+func (s *Service) UpdateName(ctx context.Context, userID, name string) (User, error) {
+	name, err := NormalizeName(name)
+	if err != nil {
+		return User{}, err
+	}
+	return s.repository.UpdateUserName(ctx, userID, name, s.now().UTC())
+}
+
 // NormalizeEmail validates and canonicalizes an email address for lookup.
 func NormalizeEmail(email string) (string, error) {
 	email = strings.ToLower(strings.TrimSpace(email))
@@ -153,6 +201,15 @@ func ValidatePassword(password string) error {
 	return nil
 }
 
+// NormalizeName trims and validates a user display name.
+func NormalizeName(name string) (string, error) {
+	name = strings.TrimSpace(name)
+	if len([]rune(name)) < 1 || len([]rune(name)) > 100 {
+		return "", errors.New("name must contain from 1 to 100 characters")
+	}
+	return name, nil
+}
+
 func (s *Service) newTokenPair(user User, now time.Time) (TokenPair, RefreshSession, error) {
 	access, err := s.signAccessToken(user, now)
 	if err != nil {
@@ -166,7 +223,7 @@ func (s *Service) newTokenPair(user User, now time.Time) (TokenPair, RefreshSess
 }
 
 func (s *Service) signAccessToken(user User, now time.Time) (string, error) {
-	claims := jwt.MapClaims{"sub": user.ID, "email": user.Email, "iat": now.Unix(), "exp": now.Add(s.accessTokenTTL).Unix(), "jti": newID()}
+	claims := jwt.MapClaims{"sub": user.ID, "email": user.Email, "name": user.Name, "iat": now.Unix(), "exp": now.Add(s.accessTokenTTL).Unix(), "jti": newID()}
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(s.jwtSecret)
 }
 func randomToken(size int) (string, error) {
