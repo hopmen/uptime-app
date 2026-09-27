@@ -1,10 +1,10 @@
 <!-- BEGIN:nextjs-agent-rules -->
 
-# Это НЕ тот Next.js, который вы знаете
+# This is NOT the Next.js you know
 
-В этой версии есть обратно несовместимые изменения: API, соглашения и структура файлов могут отличаться от известных вам. Перед написанием кода изучите нужное руководство в `node_modules/next/dist/docs/` (путь определяется из директории этого файла; в монорепозитории пакет `next` может быть недоступен из корня). Учитывайте уведомления об устаревших возможностях.
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
 
-Этот блок создаётся и повторно добавляется командой `next dev`; его источник — `node_modules/next/dist/server/lib/generate-agent-files.js`. Удаление блока из diff приведёт лишь к повторному появлению незафиксированного изменения; коммитьте его вместе со своей работой, чтобы рабочее дерево оставалось чистым.
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
 

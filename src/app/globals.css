@@ -1,3 +1,60 @@
-* {
-  box-sizing: border-box;
-}
+:root { color-scheme: light; }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; background: #f4f7fb; color: #142033; font-family: Arial, Helvetica, sans-serif; }
+a { color: inherit; }
+button, input { font: inherit; }
+
+.auth-page, .dashboard-page { align-items: center; background: radial-gradient(circle at top left, #d9edff, transparent 40%), #f4f7fb; display: flex; justify-content: center; min-height: 100vh; padding: 24px; }
+.auth-card, .dashboard-card { background: #ffffff; border: 1px solid #dce4ef; border-radius: 20px; box-shadow: 0 20px 60px rgba(20, 32, 51, .12); max-width: 440px; padding: 40px; width: 100%; }
+.brand { color: #1767ce; font-size: 1.25rem; font-weight: 800; letter-spacing: -.04em; text-decoration: none; }
+.eyebrow { color: #58708f; font-size: .8rem; font-weight: 700; letter-spacing: .1em; margin: 28px 0 8px; text-transform: uppercase; }
+h1 { font-size: clamp(1.8rem, 4vw, 2.35rem); letter-spacing: -.045em; line-height: 1.05; margin: 0; }
+.auth-copy, .dashboard-copy { color: #58708f; line-height: 1.55; margin: 14px 0 28px; }
+.auth-form { display: grid; gap: 10px; }
+.auth-form label { font-size: .9rem; font-weight: 700; margin-top: 8px; }
+.auth-form input { border: 1px solid #b9c6d7; border-radius: 10px; min-height: 48px; padding: 0 13px; transition: border-color .15s, box-shadow .15s; }
+.auth-form input:focus { border-color: #1767ce; box-shadow: 0 0 0 3px rgba(23, 103, 206, .18); outline: none; }
+.auth-form button { background: #1767ce; border: 0; border-radius: 10px; color: #fff; cursor: pointer; font-weight: 700; margin-top: 14px; min-height: 48px; padding: 0 16px; transition: background .15s, transform .15s; }
+.auth-form button:hover:not(:disabled) { background: #1055ad; }
+.auth-form button:active:not(:disabled) { transform: translateY(1px); }
+.auth-form button:disabled { cursor: wait; opacity: .65; }
+.form-error { background: #fff0f0; border-radius: 8px; color: #b42318; margin: 6px 0 0; padding: 10px 12px; }
+.auth-switch { color: #58708f; margin: 24px 0 0; text-align: center; }
+.auth-switch a { color: #1767ce; font-weight: 700; }
+.dashboard-page { position: relative; }
+.dashboard-header { align-items: center; display: flex; justify-content: space-between; left: 50%; max-width: 1120px; padding: 24px; position: absolute; top: 0; transform: translateX(-50%); width: 100%; }
+.dashboard-account { align-items: center; display: flex; gap: 12px; }
+.profile-menu { position: relative; }
+.profile-menu summary { align-items: center; border-radius: 12px; cursor: pointer; display: flex; gap: 10px; list-style: none; padding: 8px; }
+.profile-menu summary::-webkit-details-marker { display: none; }
+.profile-menu summary:hover, .profile-menu[open] summary { background: #f1f6fd; }
+.profile-avatar { align-items: center; background: #1767ce; border-radius: 50%; color: #fff; display: inline-flex; font-size: .8rem; font-weight: 800; height: 32px; justify-content: center; width: 32px; }
+.profile-email { font-size: .9rem; font-weight: 700; margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.profile-menu summary::after { color: #58708f; content: "⌄"; font-size: 1.2rem; line-height: 1; }
+.profile-menu[open] summary::after { transform: rotate(180deg); }
+.profile-menu-content { background: #fff; border: 1px solid #dce4ef; border-radius: 12px; box-shadow: 0 12px 28px rgba(20, 32, 51, .14); padding: 14px; position: absolute; right: 0; top: 48px; width: 260px; z-index: 1; }
+.profile-menu-content p { color: #58708f; font-size: .8rem; font-weight: 700; letter-spacing: .06em; margin: 0 0 6px; text-transform: uppercase; }
+.profile-menu-content strong { display: block; overflow-wrap: anywhere; }
+.profile-menu-link { color: #1767ce; display: inline-block; font-size: .9rem; font-weight: 700; margin-top: 14px; text-decoration: none; }
+.profile-menu-link:hover { text-decoration: underline; }
+.logout-button { background: #fff; border: 1px solid #c9332b; border-radius: 8px; color: #b42318; cursor: pointer; font-weight: 700; min-height: 38px; padding: 0 14px; }
+.logout-button:hover:not(:disabled) { background: #fff0f0; }
+.logout-button:disabled { cursor: wait; opacity: .65; }
+.profile-menu-error { bottom: -28px; color: #b42318; font-size: .85rem; margin: 0; position: absolute; right: 24px; }
+.loading { color: #58708f; }
+.profile-page { align-items: center; background: radial-gradient(circle at top left, #d9edff, transparent 40%), #f4f7fb; display: flex; justify-content: center; min-height: 100vh; padding: 24px; }
+.profile-card { background: #fff; border: 1px solid #dce4ef; border-radius: 20px; box-shadow: 0 20px 60px rgba(20, 32, 51, .12); max-width: 500px; padding: 40px; width: 100%; }
+.profile-copy { color: #58708f; line-height: 1.55; margin: 14px 0 28px; }
+.profile-form { display: grid; gap: 10px; }
+.profile-form label { font-size: .9rem; font-weight: 700; margin-top: 8px; }
+.profile-form input { background: #fff; border: 1px solid #b9c6d7; border-radius: 10px; min-height: 48px; padding: 0 13px; }
+.profile-form input:focus { border-color: #1767ce; box-shadow: 0 0 0 3px rgba(23, 103, 206, .18); outline: none; }
+.profile-form input[readonly] { background: #f4f7fb; color: #58708f; }
+.profile-actions { display: flex; gap: 12px; margin-top: 14px; }
+.profile-actions button, .secondary-button { align-items: center; border-radius: 10px; display: inline-flex; font-weight: 700; justify-content: center; min-height: 48px; padding: 0 16px; text-decoration: none; }
+.profile-actions button { background: #1767ce; border: 0; color: #fff; cursor: pointer; flex: 1; }
+.profile-actions button:hover:not(:disabled) { background: #1055ad; }
+.profile-actions button:disabled { cursor: wait; opacity: .65; }
+.secondary-button { border: 1px solid #b9c6d7; color: #142033; }
+.form-success { background: #ecfdf3; border-radius: 8px; color: #067647; margin: 6px 0 0; padding: 10px 12px; }
+@media (max-width: 480px) { .auth-page, .dashboard-page { padding: 16px; } .auth-card, .dashboard-card { border-radius: 16px; padding: 28px 22px; } .dashboard-header { padding: 16px; } .dashboard-header .brand { display: none; } .dashboard-account { margin-left: auto; } .profile-email { max-width: 135px; } }

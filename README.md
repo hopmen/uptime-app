@@ -1,3 +1,17 @@
+# Uptime frontend
+
+## Локальная авторизация
+
+Скопируйте `.env.example` в `.env.local` и укажите адрес backend API:
+
+```sh
+NEXT_PUBLIC_API_URL=http://localhost:8080
+```
+
+Backend должен быть запущен с `FRONTEND_ORIGIN=http://localhost:3000`, чтобы браузер мог передавать refresh-cookie в запросах к API.
+
+## Запуск
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
