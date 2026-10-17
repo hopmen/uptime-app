@@ -1,10 +1,14 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -175,6 +179,62 @@ func TestProfileCanBeReadAndNameUpdated(t *testing.T) {
 	}
 }
 
+func TestAvatarUploadStoresAndServesImage(t *testing.T) {
+	directory := t.TempDir()
+	service := auth.NewService(newTestRepository(), "01234567890123456789012345678901", 15*time.Minute, time.Hour)
+	handler := New(config.Config{FrontendOrigin: "http://localhost:3000", RefreshTokenTTL: time.Hour, CookieSameSite: "lax", AvatarUploadDir: directory}, service)
+
+	register := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", strings.NewReader(`{"email":"person@example.com","password":"password1"}`))
+	registered := httptest.NewRecorder()
+	handler.ServeHTTP(registered, register)
+	var registration struct {
+		AccessToken string `json:"accessToken"`
+	}
+	if err := json.NewDecoder(registered.Body).Decode(&registration); err != nil {
+		t.Fatal(err)
+	}
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile("avatar", "avatar.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := part.Write([]byte("\x89PNG\r\n\x1a\n")); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	upload := httptest.NewRequest(http.MethodPost, "/api/v1/profile/avatar", &body)
+	upload.Header.Set("Authorization", "Bearer "+registration.AccessToken)
+	upload.Header.Set("Content-Type", writer.FormDataContentType())
+	uploaded := httptest.NewRecorder()
+	handler.ServeHTTP(uploaded, upload)
+	if uploaded.Code != http.StatusOK {
+		t.Fatalf("upload status = %d: %s", uploaded.Code, uploaded.Body.String())
+	}
+	var user struct {
+		AvatarURL string `json:"avatarUrl"`
+	}
+	if err := json.NewDecoder(uploaded.Body).Decode(&user); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(user.AvatarURL, avatarURLPrefix) {
+		t.Fatalf("avatar URL = %q", user.AvatarURL)
+	}
+	if _, err := os.Stat(filepath.Join(directory, filepath.Base(user.AvatarURL))); err != nil {
+		t.Fatalf("avatar file was not stored: %v", err)
+	}
+
+	image := httptest.NewRequest(http.MethodGet, user.AvatarURL, nil)
+	served := httptest.NewRecorder()
+	handler.ServeHTTP(served, image)
+	if served.Code != http.StatusOK || served.Header().Get("Content-Type") != "image/png" {
+		t.Fatalf("served response = %d, %q", served.Code, served.Header().Get("Content-Type"))
+	}
+}
+
 type testRepository struct {
 	users    map[string]auth.User
 	emails   map[string]string
@@ -213,6 +273,16 @@ func (r *testRepository) UpdateUserName(_ context.Context, id, name string, upda
 		return auth.User{}, auth.ErrNotFound
 	}
 	user.Name = name
+	user.UpdatedAt = updatedAt
+	r.users[id] = user
+	return user, nil
+}
+func (r *testRepository) UpdateUserAvatar(_ context.Context, id, avatarURL string, updatedAt time.Time) (auth.User, error) {
+	user, ok := r.users[id]
+	if !ok {
+		return auth.User{}, auth.ErrNotFound
+	}
+	user.AvatarURL = avatarURL
 	user.UpdatedAt = updatedAt
 	r.users[id] = user
 	return user, nil

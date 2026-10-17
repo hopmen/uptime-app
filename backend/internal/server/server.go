@@ -4,7 +4,11 @@ package server
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -13,6 +17,11 @@ import (
 )
 
 const refreshCookieName = "refresh_token"
+
+const (
+	avatarURLPrefix = "/uploads/avatars/"
+	maxAvatarSize   = 5 << 20
+)
 
 // New builds the application HTTP handler.
 func New(cfg config.Config, authService *auth.Service) http.Handler {
@@ -24,6 +33,8 @@ func New(cfg config.Config, authService *auth.Service) http.Handler {
 	mux.HandleFunc("POST /api/v1/auth/logout", handler.logout)
 	mux.HandleFunc("GET /api/v1/profile", handler.profile)
 	mux.HandleFunc("PATCH /api/v1/profile", handler.updateProfile)
+	mux.HandleFunc("POST /api/v1/profile/avatar", handler.uploadAvatar)
+	mux.Handle("GET /uploads/avatars/", http.StripPrefix(avatarURLPrefix, http.FileServer(http.Dir(cfg.AvatarUploadDir))))
 	return cors(cfg.FrontendOrigin, mux)
 }
 
@@ -39,6 +50,7 @@ type userResponse struct {
 	ID        string    `json:"id"`
 	Email     string    `json:"email"`
 	Name      string    `json:"name"`
+	AvatarURL string    `json:"avatarUrl"`
 	CreatedAt time.Time `json:"createdAt"`
 }
 type updateProfileRequest struct {
@@ -144,6 +156,93 @@ func (h *authHandler) updateProfile(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, userResponseFromUser(updatedUser))
 }
 
+func (h *authHandler) uploadAvatar(w http.ResponseWriter, r *http.Request) {
+	user, ok := h.authenticatedUser(w, r)
+	if !ok {
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, maxAvatarSize+32<<10)
+	if err := r.ParseMultipartForm(maxAvatarSize); err != nil {
+		writeError(w, http.StatusBadRequest, "avatar image must not exceed 5 MB")
+		return
+	}
+	file, header, err := r.FormFile("avatar")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "avatar image is required")
+		return
+	}
+	defer file.Close()
+	if header.Size > maxAvatarSize {
+		writeError(w, http.StatusBadRequest, "avatar image must not exceed 5 MB")
+		return
+	}
+
+	avatarURL, err := h.saveAvatar(user.ID, file)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	updatedUser, err := h.service.UpdateAvatar(r.Context(), user.ID, avatarURL)
+	if err != nil {
+		_ = os.Remove(filepath.Join(h.config.AvatarUploadDir, filepath.Base(avatarURL)))
+		writeError(w, http.StatusInternalServerError, "could not save avatar")
+		return
+	}
+	h.removeAvatar(user.AvatarURL)
+	writeJSON(w, http.StatusOK, userResponseFromUser(updatedUser))
+}
+
+func (h *authHandler) saveAvatar(userID string, source io.Reader) (string, error) {
+	if err := os.MkdirAll(h.config.AvatarUploadDir, 0o750); err != nil {
+		return "", fmt.Errorf("could not prepare avatar storage")
+	}
+	buffer := make([]byte, 512)
+	n, err := io.ReadFull(source, buffer)
+	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) && !errors.Is(err, io.EOF) {
+		return "", fmt.Errorf("could not read avatar image")
+	}
+	contentType := http.DetectContentType(buffer[:n])
+	extension, ok := map[string]string{
+		"image/jpeg": ".jpg",
+		"image/png":  ".png",
+		"image/gif":  ".gif",
+		"image/webp": ".webp",
+	}[contentType]
+	if !ok {
+		return "", fmt.Errorf("avatar must be a JPEG, PNG, GIF, or WebP image")
+	}
+	temporary, err := os.CreateTemp(h.config.AvatarUploadDir, ".avatar-*")
+	if err != nil {
+		return "", fmt.Errorf("could not save avatar")
+	}
+	temporaryName := temporary.Name()
+	defer func() { _ = os.Remove(temporaryName) }()
+	if _, err := temporary.Write(buffer[:n]); err != nil {
+		_ = temporary.Close()
+		return "", fmt.Errorf("could not save avatar")
+	}
+	if _, err := io.Copy(temporary, io.LimitReader(source, maxAvatarSize+1)); err != nil {
+		_ = temporary.Close()
+		return "", fmt.Errorf("could not save avatar")
+	}
+	if err := temporary.Close(); err != nil {
+		return "", fmt.Errorf("could not save avatar")
+	}
+	name := userID + "-" + strings.TrimPrefix(filepath.Base(temporaryName), ".avatar-") + extension
+	if err := os.Rename(temporaryName, filepath.Join(h.config.AvatarUploadDir, name)); err != nil {
+		return "", fmt.Errorf("could not save avatar")
+	}
+	return avatarURLPrefix + name, nil
+}
+
+func (h *authHandler) removeAvatar(avatarURL string) {
+	name, ok := strings.CutPrefix(avatarURL, avatarURLPrefix)
+	if !ok || name == "" || filepath.Base(name) != name {
+		return
+	}
+	_ = os.Remove(filepath.Join(h.config.AvatarUploadDir, name))
+}
+
 func (h *authHandler) authenticatedUser(w http.ResponseWriter, r *http.Request) (auth.User, bool) {
 	accessToken, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 	if !ok || accessToken == "" {
@@ -159,7 +258,7 @@ func (h *authHandler) authenticatedUser(w http.ResponseWriter, r *http.Request) 
 }
 
 func userResponseFromUser(user auth.User) userResponse {
-	return userResponse{ID: user.ID, Email: user.Email, Name: user.Name, CreatedAt: user.CreatedAt}
+	return userResponse{ID: user.ID, Email: user.Email, Name: user.Name, AvatarURL: user.AvatarURL, CreatedAt: user.CreatedAt}
 }
 
 func (h *authHandler) setRefreshCookie(w http.ResponseWriter, refreshToken string) {

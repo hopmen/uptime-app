@@ -41,6 +41,7 @@ type userModel struct {
 	ID           string    `gorm:"type:uuid;primaryKey"`
 	Email        string    `gorm:"uniqueIndex;not null"`
 	Name         string    `gorm:"not null"`
+	AvatarURL    string    `gorm:"not null"`
 	PasswordHash string    `gorm:"not null"`
 	CreatedAt    time.Time `gorm:"not null"`
 	UpdatedAt    time.Time `gorm:"not null"`
@@ -101,6 +102,18 @@ func (r *Repository) UpdateUserName(ctx context.Context, id, name string, update
 	return r.FindUserByID(ctx, id)
 }
 
+// UpdateUserAvatar persists the avatar URL and update time for a user.
+func (r *Repository) UpdateUserAvatar(ctx context.Context, id, avatarURL string, updatedAt time.Time) (auth.User, error) {
+	result := r.db.WithContext(ctx).Model(&userModel{}).Where("id = ?", id).Updates(map[string]any{"avatar_url": avatarURL, "updated_at": updatedAt})
+	if result.Error != nil {
+		return auth.User{}, result.Error
+	}
+	if result.RowsAffected != 1 {
+		return auth.User{}, auth.ErrNotFound
+	}
+	return r.FindUserByID(ctx, id)
+}
+
 // CreateSession persists a new refresh session.
 func (r *Repository) CreateSession(ctx context.Context, session auth.RefreshSession) error {
 	return r.db.WithContext(ctx).Create(toSessionModel(session)).Error
@@ -142,10 +155,10 @@ func (r *Repository) DeleteSessionByTokenHash(ctx context.Context, hash string) 
 }
 
 func toUserModel(user auth.User) userModel {
-	return userModel{ID: user.ID, Email: user.Email, Name: user.Name, PasswordHash: user.PasswordHash, CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt}
+	return userModel{ID: user.ID, Email: user.Email, Name: user.Name, AvatarURL: user.AvatarURL, PasswordHash: user.PasswordHash, CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt}
 }
 func fromUserModel(model userModel) auth.User {
-	return auth.User{ID: model.ID, Email: model.Email, Name: model.Name, PasswordHash: model.PasswordHash, CreatedAt: model.CreatedAt, UpdatedAt: model.UpdatedAt}
+	return auth.User{ID: model.ID, Email: model.Email, Name: model.Name, AvatarURL: model.AvatarURL, PasswordHash: model.PasswordHash, CreatedAt: model.CreatedAt, UpdatedAt: model.UpdatedAt}
 }
 func toSessionModel(session auth.RefreshSession) refreshSessionModel {
 	return refreshSessionModel{ID: session.ID, UserID: session.UserID, TokenHash: session.TokenHash, ExpiresAt: session.ExpiresAt, CreatedAt: session.CreatedAt}

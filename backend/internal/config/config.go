@@ -20,6 +20,7 @@ type Config struct {
 	RefreshTokenTTL time.Duration
 	CookieSecure    bool
 	CookieSameSite  string
+	AvatarUploadDir string
 }
 
 // Load reads and validates configuration from environment variables.
@@ -33,6 +34,7 @@ func Load() (Config, error) {
 		AccessTokenTTL:  15 * time.Minute,
 		RefreshTokenTTL: 30 * 24 * time.Hour,
 		CookieSameSite:  envOrDefault("COOKIE_SAME_SITE", "lax"),
+		AvatarUploadDir: envOrDefault("AVATAR_UPLOAD_DIR", "uploads/avatars"),
 	}
 
 	var err error

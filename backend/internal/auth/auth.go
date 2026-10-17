@@ -26,8 +26,8 @@ var (
 
 // User is an authenticated application user.
 type User struct {
-	ID, Email, Name, PasswordHash string
-	CreatedAt, UpdatedAt          time.Time
+	ID, Email, Name, AvatarURL, PasswordHash string
+	CreatedAt, UpdatedAt                     time.Time
 }
 
 // RefreshSession represents a persisted refresh-token session.
@@ -42,6 +42,7 @@ type Repository interface {
 	FindUserByEmail(context.Context, string) (User, error)
 	FindUserByID(context.Context, string) (User, error)
 	UpdateUserName(context.Context, string, string, time.Time) (User, error)
+	UpdateUserAvatar(context.Context, string, string, time.Time) (User, error)
 	CreateSession(context.Context, RefreshSession) error
 	FindSessionByTokenHash(context.Context, string) (RefreshSession, error)
 	RotateSession(context.Context, string, RefreshSession) error
@@ -184,6 +185,14 @@ func (s *Service) UpdateName(ctx context.Context, userID, name string) (User, er
 	return s.repository.UpdateUserName(ctx, userID, name, s.now().UTC())
 }
 
+// UpdateAvatar changes the avatar URL of an existing user.
+func (s *Service) UpdateAvatar(ctx context.Context, userID, avatarURL string) (User, error) {
+	if avatarURL == "" {
+		return User{}, errors.New("avatar URL must not be empty")
+	}
+	return s.repository.UpdateUserAvatar(ctx, userID, avatarURL, s.now().UTC())
+}
+
 // NormalizeEmail validates and canonicalizes an email address for lookup.
 func NormalizeEmail(email string) (string, error) {
 	email = strings.ToLower(strings.TrimSpace(email))
@@ -223,7 +232,7 @@ func (s *Service) newTokenPair(user User, now time.Time) (TokenPair, RefreshSess
 }
 
 func (s *Service) signAccessToken(user User, now time.Time) (string, error) {
-	claims := jwt.MapClaims{"sub": user.ID, "email": user.Email, "name": user.Name, "iat": now.Unix(), "exp": now.Add(s.accessTokenTTL).Unix(), "jti": newID()}
+	claims := jwt.MapClaims{"sub": user.ID, "email": user.Email, "name": user.Name, "avatarUrl": user.AvatarURL, "iat": now.Unix(), "exp": now.Add(s.accessTokenTTL).Unix(), "jti": newID()}
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(s.jwtSecret)
 }
 func randomToken(size int) (string, error) {

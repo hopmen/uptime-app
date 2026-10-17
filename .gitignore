@@ -6,6 +6,7 @@ frontend/out/
 # Go
 backend/bin/
 backend/coverage.out
+backend/uploads/
 
 # Environment and local tooling
 .env

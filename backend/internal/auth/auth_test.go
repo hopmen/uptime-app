@@ -120,6 +120,16 @@ func (r *memoryRepository) UpdateUserName(_ context.Context, id, name string, up
 	r.users[id] = user
 	return user, nil
 }
+func (r *memoryRepository) UpdateUserAvatar(_ context.Context, id, avatarURL string, updatedAt time.Time) (User, error) {
+	user, ok := r.users[id]
+	if !ok {
+		return User{}, ErrNotFound
+	}
+	user.AvatarURL = avatarURL
+	user.UpdatedAt = updatedAt
+	r.users[id] = user
+	return user, nil
+}
 func (r *memoryRepository) CreateSession(_ context.Context, session RefreshSession) error {
 	r.sessions[session.TokenHash] = session
 	return nil
