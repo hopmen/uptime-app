@@ -18,6 +18,7 @@ import {
   logout as logoutRequest,
   refresh as refreshRequest,
   register as registerRequest,
+  uploadAvatar as uploadAvatarRequest,
   updateProfile as updateProfileRequest,
 } from "@/lib/auth-api";
 
@@ -34,6 +35,7 @@ type AuthContextValue = {
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (name: string) => Promise<void>;
+  uploadAvatar: (avatar: File) => Promise<void>;
   authorizedFetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 };
 
@@ -43,6 +45,7 @@ type JwtClaims = {
   sub?: string;
   email?: string;
   name?: string;
+  avatarUrl?: string;
   exp?: number;
 };
 
@@ -69,7 +72,7 @@ function sessionFromToken(accessToken: string, user?: User): Session {
   return {
     accessToken,
     expiresAt: claims.exp * 1000,
-    user: user ?? { id: claims.sub, email: claims.email, name: claims.name ?? "", createdAt: "" },
+    user: user ?? { id: claims.sub, email: claims.email, name: claims.name ?? "", avatarUrl: claims.avatarUrl ?? "", createdAt: "" },
   };
 }
 
@@ -148,6 +151,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     applySession(currentSession.accessToken, user);
   }, [applySession]);
 
+  const uploadAvatar = useCallback(async (avatar: File) => {
+    const currentSession = sessionRef.current;
+    if (!currentSession) {
+      throw new Error("Пользователь не авторизован");
+    }
+    const user = await uploadAvatarRequest(avatar, currentSession.accessToken);
+    applySession(currentSession.accessToken, user);
+  }, [applySession]);
+
   const authorizedFetch = useCallback(async (input: RequestInfo | URL, init: RequestInit = {}) => {
     const send = (accessToken: string) => fetch(input, {
       ...init,
@@ -175,8 +187,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     register,
     logout,
     updateProfile,
+    uploadAvatar,
     authorizedFetch,
-  }), [authorizedFetch, isLoading, login, logout, register, session, updateProfile]);
+  }), [authorizedFetch, isLoading, login, logout, register, session, updateProfile, uploadAvatar]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

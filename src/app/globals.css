@@ -29,6 +29,7 @@ h1 { font-size: clamp(1.8rem, 4vw, 2.35rem); letter-spacing: -.045em; line-heigh
 .profile-menu summary::-webkit-details-marker { display: none; }
 .profile-menu summary:hover, .profile-menu[open] summary { background: #f1f6fd; }
 .profile-avatar { align-items: center; background: #1767ce; border-radius: 50%; color: #fff; display: inline-flex; font-size: .8rem; font-weight: 800; height: 32px; justify-content: center; width: 32px; }
+img.profile-avatar { object-fit: cover; }
 .profile-email { font-size: .9rem; font-weight: 700; margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .profile-menu summary::after { color: #58708f; content: "⌄"; font-size: 1.2rem; line-height: 1; }
 .profile-menu[open] summary::after { transform: rotate(180deg); }
@@ -50,6 +51,13 @@ h1 { font-size: clamp(1.8rem, 4vw, 2.35rem); letter-spacing: -.045em; line-heigh
 .profile-form input { background: #fff; border: 1px solid #b9c6d7; border-radius: 10px; min-height: 48px; padding: 0 13px; }
 .profile-form input:focus { border-color: #1767ce; box-shadow: 0 0 0 3px rgba(23, 103, 206, .18); outline: none; }
 .profile-form input[readonly] { background: #f4f7fb; color: #58708f; }
+.avatar-editor { align-items: center; background: #f4f7fb; border-radius: 12px; display: flex; gap: 16px; margin: 4px 0 8px; padding: 16px; }
+.profile-avatar-large { flex: 0 0 80px; font-size: 1.5rem; height: 80px; width: 80px; }
+.avatar-upload-button { background: #fff; border: 1px solid #b9c6d7; border-radius: 8px; color: #142033; cursor: pointer; display: inline-flex; font-size: .9rem; font-weight: 700; min-height: 38px; padding: 0 12px; }
+.avatar-upload-button:hover { border-color: #1767ce; color: #1767ce; }
+.avatar-input { height: 1px; opacity: 0; overflow: hidden; position: absolute; width: 1px; }
+.avatar-hint, .avatar-selected { color: #58708f; font-size: .8rem; margin: 7px 0 0; }
+.avatar-selected { color: #067647; }
 .profile-actions { display: flex; gap: 12px; margin-top: 14px; }
 .profile-actions button, .secondary-button { align-items: center; border-radius: 10px; display: inline-flex; font-weight: 700; justify-content: center; min-height: 48px; padding: 0 16px; text-decoration: none; }
 .profile-actions button { background: #1767ce; border: 0; color: #fff; cursor: pointer; flex: 1; }

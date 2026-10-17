@@ -2,6 +2,7 @@ export type User = {
   id: string;
   email: string;
   name: string;
+  avatarUrl: string;
   createdAt: string;
 };
 
@@ -53,7 +54,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       ...init,
       credentials: "include",
       headers: {
-        "Content-Type": "application/json",
+        ...(init.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
         ...init.headers,
       },
     });
@@ -101,4 +102,22 @@ export function updateProfile(name: string, accessToken: string) {
     headers: { Authorization: `Bearer ${accessToken}` },
     body: JSON.stringify({ name }),
   });
+}
+
+export function uploadAvatar(avatar: File, accessToken: string) {
+  const data = new FormData();
+  data.append("avatar", avatar);
+
+  return request<User>("/api/v1/profile/avatar", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: data,
+  });
+}
+
+export function avatarUrl(path: string) {
+  if (!path) {
+    return "";
+  }
+  return new URL(path, `${getApiUrl()}/`).toString();
 }

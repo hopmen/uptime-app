@@ -1,8 +1,11 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element -- avatar files are served by the configured API origin. */
+
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { avatarUrl } from "@/lib/auth-api";
 import { useAuth } from "@/components/auth-provider";
 
 export default function DashboardPage() {
@@ -45,7 +48,7 @@ export default function DashboardPage() {
         <div className="dashboard-account">
           <details className="profile-menu">
             <summary aria-label="Открыть меню профиля">
-              <span className="profile-avatar" aria-hidden="true">{(user.name || user.email).charAt(0).toUpperCase()}</span>
+              {user.avatarUrl ? <img className="profile-avatar" src={avatarUrl(user.avatarUrl)} alt="" /> : <span className="profile-avatar" aria-hidden="true">{(user.name || user.email).charAt(0).toUpperCase()}</span>}
               <span className="profile-email">{user.name || user.email}</span>
             </summary>
             <div className="profile-menu-content">
