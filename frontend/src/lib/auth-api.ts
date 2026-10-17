@@ -36,7 +36,7 @@ export class ApiError extends Error {
   }
 }
 
-function getApiUrl() {
+export function getApiUrl() {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
 
   if (!apiUrl) {

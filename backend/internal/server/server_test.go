@@ -20,7 +20,7 @@ import (
 func TestRegisterThenRefresh(t *testing.T) {
 	repository := newTestRepository()
 	service := auth.NewService(repository, "01234567890123456789012345678901", 15*time.Minute, 30*24*time.Hour)
-	handler := New(config.Config{FrontendOrigin: "http://localhost:3000", RefreshTokenTTL: 30 * 24 * time.Hour, CookieSameSite: "lax"}, service)
+	handler := New(config.Config{FrontendOrigin: "http://localhost:3000", RefreshTokenTTL: 30 * 24 * time.Hour, CookieSameSite: "lax"}, service, nil)
 
 	register := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", strings.NewReader(`{"email":"person@example.com","password":"password1"}`))
 	register.Header.Set("Origin", "http://localhost:3000")
@@ -61,7 +61,7 @@ func TestRegisterThenRefresh(t *testing.T) {
 
 func TestRegisterRejectsShortPassword(t *testing.T) {
 	service := auth.NewService(newTestRepository(), "01234567890123456789012345678901", 15*time.Minute, time.Hour)
-	handler := New(config.Config{FrontendOrigin: "http://localhost:3000", RefreshTokenTTL: time.Hour, CookieSameSite: "lax"}, service)
+	handler := New(config.Config{FrontendOrigin: "http://localhost:3000", RefreshTokenTTL: time.Hour, CookieSameSite: "lax"}, service, nil)
 	request := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", strings.NewReader(`{"email":"person@example.com","password":"short"}`))
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, request)
@@ -72,7 +72,7 @@ func TestRegisterRejectsShortPassword(t *testing.T) {
 
 func TestLogoutClearsCookieAndInvalidatesSession(t *testing.T) {
 	service := auth.NewService(newTestRepository(), "01234567890123456789012345678901", 15*time.Minute, time.Hour)
-	handler := New(config.Config{FrontendOrigin: "http://localhost:3000", RefreshTokenTTL: time.Hour, CookieSameSite: "lax"}, service)
+	handler := New(config.Config{FrontendOrigin: "http://localhost:3000", RefreshTokenTTL: time.Hour, CookieSameSite: "lax"}, service, nil)
 
 	register := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", strings.NewReader(`{"email":"person@example.com","password":"password1"}`))
 	registered := httptest.NewRecorder()
@@ -102,7 +102,7 @@ func TestLogoutClearsCookieAndInvalidatesSession(t *testing.T) {
 
 func TestLoginAndAuthenticationErrors(t *testing.T) {
 	service := auth.NewService(newTestRepository(), "01234567890123456789012345678901", 15*time.Minute, time.Hour)
-	handler := New(config.Config{FrontendOrigin: "http://localhost:3000", RefreshTokenTTL: time.Hour, CookieSameSite: "lax"}, service)
+	handler := New(config.Config{FrontendOrigin: "http://localhost:3000", RefreshTokenTTL: time.Hour, CookieSameSite: "lax"}, service, nil)
 
 	firstRegistration := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", strings.NewReader(`{"email":"person@example.com","password":"password1"}`))
 	firstResponse := httptest.NewRecorder()
@@ -135,7 +135,7 @@ func TestLoginAndAuthenticationErrors(t *testing.T) {
 
 func TestProfileCanBeReadAndNameUpdated(t *testing.T) {
 	service := auth.NewService(newTestRepository(), "01234567890123456789012345678901", 15*time.Minute, time.Hour)
-	handler := New(config.Config{FrontendOrigin: "http://localhost:3000", RefreshTokenTTL: time.Hour, CookieSameSite: "lax"}, service)
+	handler := New(config.Config{FrontendOrigin: "http://localhost:3000", RefreshTokenTTL: time.Hour, CookieSameSite: "lax"}, service, nil)
 
 	register := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", strings.NewReader(`{"email":"person@example.com","password":"password1"}`))
 	registered := httptest.NewRecorder()
@@ -182,7 +182,7 @@ func TestProfileCanBeReadAndNameUpdated(t *testing.T) {
 func TestAvatarUploadStoresAndServesImage(t *testing.T) {
 	directory := t.TempDir()
 	service := auth.NewService(newTestRepository(), "01234567890123456789012345678901", 15*time.Minute, time.Hour)
-	handler := New(config.Config{FrontendOrigin: "http://localhost:3000", RefreshTokenTTL: time.Hour, CookieSameSite: "lax", AvatarUploadDir: directory}, service)
+	handler := New(config.Config{FrontendOrigin: "http://localhost:3000", RefreshTokenTTL: time.Hour, CookieSameSite: "lax", AvatarUploadDir: directory}, service, nil)
 
 	register := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", strings.NewReader(`{"email":"person@example.com","password":"password1"}`))
 	registered := httptest.NewRecorder()

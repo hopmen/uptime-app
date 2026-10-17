@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { avatarUrl } from "@/lib/auth-api";
 import { useAuth } from "@/components/auth-provider";
+import { MonitorList } from "./monitor-list";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -64,6 +65,7 @@ export default function DashboardPage() {
         </div>
         {logoutError && <p className="profile-menu-error" role="alert">{logoutError}</p>}
       </header>
+      <MonitorList key={user.id} />
     </main>
   );
 }
