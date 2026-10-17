@@ -31,10 +31,10 @@ func Close(db *gorm.DB) error {
 	return sqlDB.Close()
 }
 
-// Repository persists authentication entities in PostgreSQL.
+// Repository persists users, sessions, and monitoring points in PostgreSQL.
 type Repository struct{ db *gorm.DB }
 
-// NewRepository constructs an authentication repository.
+// NewRepository constructs an application repository.
 func NewRepository(db *gorm.DB) *Repository { return &Repository{db: db} }
 
 type userModel struct {

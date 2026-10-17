@@ -10,6 +10,28 @@ NEXT_PUBLIC_API_URL=http://localhost:8080
 
 Backend должен быть запущен с `FRONTEND_ORIGIN=http://localhost:3000`, чтобы браузер мог передавать refresh-cookie в запросах к API.
 
+## Создание точек мониторинга
+
+На `/dashboard` нажмите «Добавить сайт», укажите HTTP(S) URL и положительный целый интервал в секундах, минутах или часах. После нажатия «Создать» сайт появится в списке и останется там после перезагрузки страницы. Точки доступны только создавшему их пользователю. На этом этапе опрос сайтов ещё не выполняется.
+
+Перед запуском backend примените миграции, включая `000004_create_monitors`:
+
+```sh
+cd ../backend
+docker compose up -d postgres
+docker compose run --rm migrate
+```
+
+## Проверки
+
+```sh
+npm test        # Vitest: интервалы и форма создания сайта
+npm run lint
+npm run build
+```
+
+Тесты backend запускаются из `backend/` командой `go test ./...`. Для интеграционного теста с PostgreSQL задайте `TEST_DATABASE_URL` и запустите `go test ./internal/server -run TestMonitorPostgres -v`. Тест применяет миграции в отдельной схеме внутри транзакции и откатывает её после проверки.
+
 ## Запуск
 
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).

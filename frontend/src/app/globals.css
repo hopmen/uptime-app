@@ -66,3 +66,29 @@ img.profile-avatar { object-fit: cover; }
 .secondary-button { border: 1px solid #b9c6d7; color: #142033; }
 .form-success { background: #ecfdf3; border-radius: 8px; color: #067647; margin: 6px 0 0; padding: 10px 12px; }
 @media (max-width: 480px) { .auth-page, .dashboard-page { padding: 16px; } .auth-card, .dashboard-card { border-radius: 16px; padding: 28px 22px; } .dashboard-header { padding: 16px; } .dashboard-header .brand { display: none; } .dashboard-account { margin-left: auto; } .profile-email { max-width: 135px; } }
+
+.monitors { align-self: flex-start; margin: 110px auto 24px; max-width: 1072px; width: 100%; }
+.monitors-heading { align-items: center; display: flex; gap: 24px; justify-content: space-between; margin-bottom: 24px; }
+.monitors-heading .dashboard-copy { margin-bottom: 0; }
+.primary-button { background: #1767ce; border: 0; border-radius: 10px; color: #fff; cursor: pointer; font-weight: 700; min-height: 48px; padding: 0 20px; white-space: nowrap; }
+.primary-button:hover:not(:disabled) { background: #1055ad; }
+.primary-button:disabled, .monitor-actions button:disabled { cursor: wait; opacity: .65; }
+.monitors-empty, .monitor-card { background: #fff; border: 1px solid #dce4ef; border-radius: 16px; padding: 28px; }
+.monitors-empty { text-align: center; }
+.monitors-empty h2 { font-size: 1.2rem; }
+.monitors-empty p, .monitor-card p, .monitor-hint { color: #58708f; line-height: 1.5; }
+.monitor-list { display: grid; gap: 16px; list-style: none; margin: 24px 0 0; padding: 0; }
+.monitor-card a { color: #1767ce; font-weight: 700; overflow-wrap: anywhere; }
+.monitor-status { background: #f1f6fd; border-radius: 6px; color: #58708f; display: inline-block; font-size: .85rem; padding: 6px 10px; }
+.monitor-dialog { background: #fff; border: 1px solid #dce4ef; border-radius: 20px; color: #142033; max-height: calc(100dvh - 32px); max-width: 500px; overflow-y: auto; padding: 32px; width: calc(100% - 32px); }
+.monitor-dialog::backdrop { background: rgba(20, 32, 51, .45); }
+.monitor-dialog h2 { margin: 0 0 24px; }
+.monitor-form { display: grid; gap: 12px; }
+.monitor-form label { font-size: .9rem; font-weight: 700; }
+.monitor-form input, .monitor-form select { background: #fff; border: 1px solid #b9c6d7; border-radius: 10px; font: inherit; min-height: 48px; min-width: 0; padding: 0 12px; width: 100%; }
+.monitor-form input:focus, .monitor-form select:focus { border-color: #1767ce; box-shadow: 0 0 0 3px rgba(23, 103, 206, .18); outline: none; }
+.monitor-interval { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+.monitor-hint { font-size: .85rem; margin: 0; }
+.monitor-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 8px; }
+.monitor-actions .secondary-button { background: #fff; cursor: pointer; }
+@media (max-width: 600px) { .monitors-heading { align-items: flex-start; flex-direction: column; } .monitor-dialog { padding: 24px; } }

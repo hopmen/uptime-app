@@ -14,6 +14,7 @@ import (
 
 	"uptime-app/backend/internal/auth"
 	"uptime-app/backend/internal/config"
+	"uptime-app/backend/internal/monitor"
 )
 
 const refreshCookieName = "refresh_token"
@@ -24,9 +25,12 @@ const (
 )
 
 // New builds the application HTTP handler.
-func New(cfg config.Config, authService *auth.Service) http.Handler {
+func New(cfg config.Config, authService *auth.Service, monitorService *monitor.Service) http.Handler {
 	handler := &authHandler{service: authService, config: cfg}
+	monitors := &monitorHandler{auth: handler, service: monitorService}
 	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/v1/monitors", monitors.create)
+	mux.HandleFunc("GET /api/v1/monitors", monitors.list)
 	mux.HandleFunc("POST /api/v1/auth/register", handler.register)
 	mux.HandleFunc("POST /api/v1/auth/login", handler.login)
 	mux.HandleFunc("POST /api/v1/auth/refresh", handler.refresh)

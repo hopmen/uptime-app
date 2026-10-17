@@ -12,6 +12,7 @@ import (
 
 	"uptime-app/backend/internal/auth"
 	"uptime-app/backend/internal/config"
+	"uptime-app/backend/internal/monitor"
 	"uptime-app/backend/internal/server"
 	"uptime-app/backend/internal/store"
 )
@@ -31,8 +32,10 @@ func main() {
 		}
 	}()
 
-	authService := auth.NewService(store.NewRepository(db), cfg.JWTSecret, cfg.AccessTokenTTL, cfg.RefreshTokenTTL)
-	httpServer := &http.Server{Addr: cfg.Address, Handler: server.New(cfg, authService), ReadHeaderTimeout: 5 * time.Second}
+	repository := store.NewRepository(db)
+	authService := auth.NewService(repository, cfg.JWTSecret, cfg.AccessTokenTTL, cfg.RefreshTokenTTL)
+	monitorService := monitor.NewService(repository)
+	httpServer := &http.Server{Addr: cfg.Address, Handler: server.New(cfg, authService, monitorService), ReadHeaderTimeout: 5 * time.Second}
 
 	go func() {
 		log.Printf("listening on %s", cfg.Address)
