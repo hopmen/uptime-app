@@ -1,0 +1,5 @@
+interface:
+  display_name: "Backend OpenAPI"
+  short_description: "Синхронизация OpenAPI при изменении API-роутов"
+policy:
+  allow_implicit_invocation: true
