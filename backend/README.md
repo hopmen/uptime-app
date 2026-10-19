@@ -42,3 +42,21 @@ origin. Вручную задать HttpOnly cookie через Swagger UI нел
 `logout` сначала выполните `register` или `login` на этом сервере.
 Для локального HTTP используйте `COOKIE_SECURE=false`; остальные настройки и БД
 описаны в `.env.example` и `compose.yaml`.
+
+### ReDoc HTML
+
+`docs/redoc.html` — самостоятельная HTML-документация, созданная из
+`docs/openapi.json`. Её можно открыть в браузере без запуска backend: контракт
+встроен в файл. Для интерактивного интерфейса ReDoc нужен доступ к CDN Redocly;
+загрузка Google Fonts отключена.
+
+Для генерации нужны Node.js 22.12+ и npm 10+. После обновления OpenAPI-контракта
+выполните из `backend/`:
+
+```sh
+node scripts/generate-redoc.mjs
+```
+
+Скрипт запускает Redocly CLI 2.65.0 и убирает пробелы на концах строк из его
+HTML-шаблона. При первом запуске npm скачивает CLI;
+сгенерированный `docs/redoc.html` коммитьте вместе с изменениями контракта.
