@@ -17,6 +17,18 @@ import (
 	"uptime-app/backend/internal/store"
 )
 
+// @title Uptime App API
+// @version 1.0
+// @description API авторизации, профиля и точек мониторинга Uptime App.
+// @BasePath /
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description JWT access token в формате Bearer <token>.
+// @securityDefinitions.apikey RefreshCookie
+// @in header
+// @name Cookie
+// @description HttpOnly cookie refresh_token, устанавливаемая сервером при регистрации, входе и обновлении токенов.
 func main() {
 	cfg, err := config.Load()
 	if err != nil {

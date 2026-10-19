@@ -1,0 +1,716 @@
+{
+  "components": {
+    "schemas": {
+      "monitor.Monitor": {
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "intervalSeconds": {
+            "type": "integer"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "server.createMonitorRequest": {
+        "properties": {
+          "intervalSeconds": {
+            "example": 60,
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "url": {
+            "description": "URL сайта с протоколом http:// или https://, без логина и пароля.",
+            "example": "https://example.com",
+            "type": "string"
+          }
+        },
+        "required": [
+          "intervalSeconds",
+          "url"
+        ],
+        "type": "object"
+      },
+      "server.credentialsRequest": {
+        "properties": {
+          "email": {
+            "example": "person@example.com",
+            "maxLength": 254,
+            "minLength": 3,
+            "type": "string"
+          },
+          "password": {
+            "example": "password1",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "type": "object"
+      },
+      "server.errorResponse": {
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "server.refreshResponse": {
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "expiresIn": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "server.tokenResponse": {
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "expiresIn": {
+            "type": "integer"
+          },
+          "user": {
+            "$ref": "#/components/schemas/server.userResponse"
+          }
+        },
+        "type": "object"
+      },
+      "server.updateProfileRequest": {
+        "properties": {
+          "name": {
+            "example": "Анна",
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "server.userResponse": {
+        "properties": {
+          "avatarUrl": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "bearerFormat": "JWT",
+        "description": "JWT access token, полученный при регистрации, входе или обновлении токенов.",
+        "scheme": "bearer",
+        "type": "http"
+      },
+      "RefreshCookie": {
+        "description": "HttpOnly cookie refresh_token, устанавливаемая сервером при регистрации, входе и обновлении токенов.",
+        "in": "cookie",
+        "name": "refresh_token",
+        "type": "apiKey"
+      }
+    }
+  },
+  "info": {
+    "contact": {},
+    "description": "API авторизации, профиля и точек мониторинга Uptime App.",
+    "title": "Uptime App API",
+    "version": "1.0"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/api/v1/auth/login": {
+      "post": {
+        "description": "Устанавливает HttpOnly cookie refresh_token (Path=/api/v1/auth).",
+        "operationId": "login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.credentialsRequest"
+              }
+            }
+          },
+          "description": "Email и пароль",
+          "required": true,
+          "x-originalParamName": "body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.tokenResponse"
+                }
+              }
+            },
+            "description": "OK",
+            "headers": {
+              "Set-Cookie": {
+                "description": "refresh_token=\u003ctoken\u003e; Path=/api/v1/auth; HttpOnly",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.errorResponse"
+                }
+              }
+            },
+            "description": "Некорректный JSON"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.errorResponse"
+                }
+              }
+            },
+            "description": "Неверный email или пароль"
+          }
+        },
+        "summary": "Войти в аккаунт",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "description": "Отзывает сессию и удаляет cookie refresh_token. Cookie необязательна; тело запроса отсутствует.",
+        "operationId": "logout",
+        "parameters": [
+          {
+            "description": "Необязательная cookie refresh_token=\u003ctoken\u003e",
+            "in": "cookie",
+            "name": "refresh_token",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Сессия завершена; тело ответа отсутствует",
+            "headers": {
+              "Set-Cookie": {
+                "description": "refresh_token=; Path=/api/v1/auth; Max-Age=0; HttpOnly",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.errorResponse"
+                }
+              }
+            },
+            "description": "Не удалось отозвать сессию"
+          }
+        },
+        "summary": "Выйти из аккаунта",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "description": "Требует cookie refresh_token, выданную при входе или регистрации. Заменяет её новым токеном; тело запроса отсутствует.",
+        "operationId": "refresh",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.refreshResponse"
+                }
+              }
+            },
+            "description": "OK",
+            "headers": {
+              "Set-Cookie": {
+                "description": "refresh_token=\u003ctoken\u003e; Path=/api/v1/auth; HttpOnly",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.errorResponse"
+                }
+              }
+            },
+            "description": "Refresh token отсутствует, истёк или недействителен"
+          }
+        },
+        "security": [
+          {
+            "RefreshCookie": []
+          }
+        ],
+        "summary": "Обновить токены",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "description": "Пароль — минимум 8 символов. Устанавливает HttpOnly cookie refresh_token (Path=/api/v1/auth).",
+        "operationId": "register",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.credentialsRequest"
+              }
+            }
+          },
+          "description": "Email и пароль",
+          "required": true,
+          "x-originalParamName": "body"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.tokenResponse"
+                }
+              }
+            },
+            "description": "Created",
+            "headers": {
+              "Set-Cookie": {
+                "description": "refresh_token=\u003ctoken\u003e; Path=/api/v1/auth; HttpOnly",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.errorResponse"
+                }
+              }
+            },
+            "description": "Некорректный JSON, email или пароль"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.errorResponse"
+                }
+              }
+            },
+            "description": "Email уже зарегистрирован"
+          }
+        },
+        "summary": "Зарегистрировать пользователя",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/monitors": {
+      "get": {
+        "description": "Возвращает массив, в том числе пустой, без пагинации и параметров фильтрации.",
+        "operationId": "listMonitors",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/monitor.Monitor"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.errorResponse"
+                }
+              }
+            },
+            "description": "Неверный access token"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.errorResponse"
+                }
+              }
+            },
+            "description": "Не удалось загрузить точки мониторинга"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Получить точки мониторинга текущего пользователя",
+        "tags": [
+          "monitors"
+        ]
+      },
+      "post": {
+        "description": "Сохраняет URL и интервал в секундах; проверки сайта пока не запускаются.",
+        "operationId": "createMonitor",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.createMonitorRequest"
+              }
+            }
+          },
+          "description": "Настройки точки мониторинга",
+          "required": true,
+          "x-originalParamName": "body"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/monitor.Monitor"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.errorResponse"
+                }
+              }
+            },
+            "description": "Некорректный JSON, URL или интервал"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.errorResponse"
+                }
+              }
+            },
+            "description": "Неверный access token"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.errorResponse"
+                }
+              }
+            },
+            "description": "Не удалось сохранить точку мониторинга"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Создать точку мониторинга",
+        "tags": [
+          "monitors"
+        ]
+      }
+    },
+    "/api/v1/profile": {
+      "get": {
+        "operationId": "getProfile",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.userResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.errorResponse"
+                }
+              }
+            },
+            "description": "Неверный access token"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Получить профиль текущего пользователя",
+        "tags": [
+          "profile"
+        ]
+      },
+      "patch": {
+        "description": "Имя после удаления пробелов по краям должно содержать от 1 до 100 символов.",
+        "operationId": "updateProfile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.updateProfileRequest"
+              }
+            }
+          },
+          "description": "Новое имя",
+          "required": true,
+          "x-originalParamName": "body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.userResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.errorResponse"
+                }
+              }
+            },
+            "description": "Некорректный JSON или имя; не удалось обновить профиль"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.errorResponse"
+                }
+              }
+            },
+            "description": "Неверный access token"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Изменить имя пользователя",
+        "tags": [
+          "profile"
+        ]
+      }
+    },
+    "/api/v1/profile/avatar": {
+      "post": {
+        "description": "Изображение JPEG, PNG, GIF или WebP размером не более 5 МиБ. Возвращает профиль с относительным avatarUrl.",
+        "operationId": "uploadAvatar",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "avatar": {
+                    "description": "Изображение аватара (до 5 МиБ)",
+                    "format": "binary",
+                    "type": "string",
+                    "x-formData-name": "avatar"
+                  }
+                },
+                "required": [
+                  "avatar"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.userResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.errorResponse"
+                }
+              }
+            },
+            "description": "Файл отсутствует, слишком большой, имеет неподдерживаемый формат или не сохранён"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.errorResponse"
+                }
+              }
+            },
+            "description": "Неверный access token"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.errorResponse"
+                }
+              }
+            },
+            "description": "Не удалось обновить профиль после сохранения файла"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Загрузить аватар пользователя",
+        "tags": [
+          "profile"
+        ]
+      }
+    },
+    "/uploads/avatars/{filename}": {
+      "get": {
+        "description": "Публичная раздача файлов. Ошибки файлового сервера возвращаются обычным текстом.",
+        "operationId": "getAvatar",
+        "parameters": [
+          {
+            "description": "Имя файла из avatarUrl",
+            "in": "path",
+            "name": "filename",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/gif": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Изображение аватара"
+          },
+          "404": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Файл не найден"
+          }
+        },
+        "summary": "Получить сохранённый аватар",
+        "tags": [
+          "profile"
+        ]
+      }
+    }
+  }
+}

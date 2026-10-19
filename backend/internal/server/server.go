@@ -38,7 +38,8 @@ func New(cfg config.Config, authService *auth.Service, monitorService *monitor.S
 	mux.HandleFunc("GET /api/v1/profile", handler.profile)
 	mux.HandleFunc("PATCH /api/v1/profile", handler.updateProfile)
 	mux.HandleFunc("POST /api/v1/profile/avatar", handler.uploadAvatar)
-	mux.Handle("GET /uploads/avatars/", http.StripPrefix(avatarURLPrefix, http.FileServer(http.Dir(cfg.AvatarUploadDir))))
+	mux.HandleFunc("GET /uploads/avatars/", handler.avatar)
+	registerSwagger(mux)
 	return cors(cfg.FrontendOrigin, mux)
 }
 
@@ -47,18 +48,18 @@ type authHandler struct {
 	config  config.Config
 }
 type credentialsRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email    string `json:"email" validate:"required" minLength:"3" maxLength:"254" example:"person@example.com"`
+	Password string `json:"password" validate:"required" example:"password1"`
 }
 type userResponse struct {
 	ID        string    `json:"id"`
 	Email     string    `json:"email"`
 	Name      string    `json:"name"`
 	AvatarURL string    `json:"avatarUrl"`
-	CreatedAt time.Time `json:"createdAt"`
+	CreatedAt time.Time `json:"createdAt" format:"date-time"`
 }
 type updateProfileRequest struct {
-	Name string `json:"name"`
+	Name string `json:"name" validate:"required" minLength:"1" maxLength:"100" example:"Анна"`
 }
 type tokenResponse struct {
 	User        userResponse `json:"user"`
@@ -73,6 +74,19 @@ type errorResponse struct {
 	Error string `json:"error"`
 }
 
+// register godoc
+// @Summary Зарегистрировать пользователя
+// @Description Пароль — минимум 8 символов. Устанавливает HttpOnly cookie refresh_token (Path=/api/v1/auth).
+// @ID register
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param body body credentialsRequest true "Email и пароль"
+// @Success 201 {object} tokenResponse
+// @Header 201 {string} Set-Cookie "refresh_token=<token>; Path=/api/v1/auth; HttpOnly"
+// @Failure 400 {object} errorResponse "Некорректный JSON, email или пароль"
+// @Failure 409 {object} errorResponse "Email уже зарегистрирован"
+// @Router /api/v1/auth/register [post]
 func (h *authHandler) register(w http.ResponseWriter, r *http.Request) {
 	request, ok := decodeCredentials(w, r)
 	if !ok {
@@ -91,6 +105,19 @@ func (h *authHandler) register(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, tokenResponse{User: userResponseFromUser(user), AccessToken: pair.AccessToken, ExpiresIn: pair.ExpiresIn})
 }
 
+// login godoc
+// @Summary Войти в аккаунт
+// @Description Устанавливает HttpOnly cookie refresh_token (Path=/api/v1/auth).
+// @ID login
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param body body credentialsRequest true "Email и пароль"
+// @Success 200 {object} tokenResponse
+// @Header 200 {string} Set-Cookie "refresh_token=<token>; Path=/api/v1/auth; HttpOnly"
+// @Failure 400 {object} errorResponse "Некорректный JSON"
+// @Failure 401 {object} errorResponse "Неверный email или пароль"
+// @Router /api/v1/auth/login [post]
 func (h *authHandler) login(w http.ResponseWriter, r *http.Request) {
 	request, ok := decodeCredentials(w, r)
 	if !ok {
@@ -105,6 +132,17 @@ func (h *authHandler) login(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, tokenResponse{User: userResponseFromUser(user), AccessToken: pair.AccessToken, ExpiresIn: pair.ExpiresIn})
 }
 
+// refresh godoc
+// @Summary Обновить токены
+// @Description Требует cookie refresh_token, выданную при входе или регистрации. Заменяет её новым токеном; тело запроса отсутствует.
+// @ID refresh
+// @Tags auth
+// @Produce json
+// @Security RefreshCookie
+// @Success 200 {object} refreshResponse
+// @Header 200 {string} Set-Cookie "refresh_token=<token>; Path=/api/v1/auth; HttpOnly"
+// @Failure 401 {object} errorResponse "Refresh token отсутствует, истёк или недействителен"
+// @Router /api/v1/auth/refresh [post]
 func (h *authHandler) refresh(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie(refreshCookieName)
 	if err != nil {
@@ -120,6 +158,17 @@ func (h *authHandler) refresh(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, refreshResponse{AccessToken: pair.AccessToken, ExpiresIn: pair.ExpiresIn})
 }
 
+// logout godoc
+// @Summary Выйти из аккаунта
+// @Description Отзывает сессию и удаляет cookie refresh_token. Cookie необязательна; тело запроса отсутствует.
+// @ID logout
+// @Tags auth
+// @Produce json
+// @Param Cookie header string false "Необязательная cookie refresh_token=<token>"
+// @Success 204 "Сессия завершена; тело ответа отсутствует"
+// @Header 204 {string} Set-Cookie "refresh_token=; Path=/api/v1/auth; Max-Age=0; HttpOnly"
+// @Failure 500 {object} errorResponse "Не удалось отозвать сессию"
+// @Router /api/v1/auth/logout [post]
 func (h *authHandler) logout(w http.ResponseWriter, r *http.Request) {
 	if cookie, err := r.Cookie(refreshCookieName); err == nil {
 		if err := h.service.Logout(r.Context(), cookie.Value); err != nil {
@@ -131,6 +180,15 @@ func (h *authHandler) logout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// profile godoc
+// @Summary Получить профиль текущего пользователя
+// @ID getProfile
+// @Tags profile
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} userResponse
+// @Failure 401 {object} errorResponse "Неверный access token"
+// @Router /api/v1/profile [get]
 func (h *authHandler) profile(w http.ResponseWriter, r *http.Request) {
 	user, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -139,6 +197,19 @@ func (h *authHandler) profile(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, userResponseFromUser(user))
 }
 
+// updateProfile godoc
+// @Summary Изменить имя пользователя
+// @Description Имя после удаления пробелов по краям должно содержать от 1 до 100 символов.
+// @ID updateProfile
+// @Tags profile
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body updateProfileRequest true "Новое имя"
+// @Success 200 {object} userResponse
+// @Failure 400 {object} errorResponse "Некорректный JSON или имя; не удалось обновить профиль"
+// @Failure 401 {object} errorResponse "Неверный access token"
+// @Router /api/v1/profile [patch]
 func (h *authHandler) updateProfile(w http.ResponseWriter, r *http.Request) {
 	user, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -160,6 +231,20 @@ func (h *authHandler) updateProfile(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, userResponseFromUser(updatedUser))
 }
 
+// uploadAvatar godoc
+// @Summary Загрузить аватар пользователя
+// @Description Изображение JPEG, PNG, GIF или WebP размером не более 5 МиБ. Возвращает профиль с относительным avatarUrl.
+// @ID uploadAvatar
+// @Tags profile
+// @Accept multipart/form-data
+// @Produce json
+// @Security BearerAuth
+// @Param avatar formData file true "Изображение аватара (до 5 МиБ)"
+// @Success 200 {object} userResponse
+// @Failure 400 {object} errorResponse "Файл отсутствует, слишком большой, имеет неподдерживаемый формат или не сохранён"
+// @Failure 401 {object} errorResponse "Неверный access token"
+// @Failure 500 {object} errorResponse "Не удалось обновить профиль после сохранения файла"
+// @Router /api/v1/profile/avatar [post]
 func (h *authHandler) uploadAvatar(w http.ResponseWriter, r *http.Request) {
 	user, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -322,4 +407,18 @@ func cors(origin string, next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// avatar godoc
+// @Summary Получить сохранённый аватар
+// @Description Публичная раздача файлов. Ошибки файлового сервера возвращаются обычным текстом.
+// @ID getAvatar
+// @Tags profile
+// @Produce image/jpeg,image/png,image/gif,image/webp
+// @Param filename path string true "Имя файла из avatarUrl"
+// @Success 200 {file} file "Изображение аватара"
+// @Failure 404 {string} string "Файл не найден"
+// @Router /uploads/avatars/{filename} [get]
+func (h *authHandler) avatar(w http.ResponseWriter, r *http.Request) {
+	http.StripPrefix(avatarURLPrefix, http.FileServer(http.Dir(h.config.AvatarUploadDir))).ServeHTTP(w, r)
 }

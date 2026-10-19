@@ -14,6 +14,26 @@ type monitorHandler struct {
 	service *monitor.Service
 }
 
+type createMonitorRequest struct {
+	// URL сайта с протоколом http:// или https://, без логина и пароля.
+	URL             string `json:"url" validate:"required" example:"https://example.com"`
+	IntervalSeconds int64  `json:"intervalSeconds" validate:"required" minimum:"1" maximum:"2147483647" example:"60"`
+}
+
+// create godoc
+// @Summary Создать точку мониторинга
+// @Description Сохраняет URL и интервал в секундах; проверки сайта пока не запускаются.
+// @ID createMonitor
+// @Tags monitors
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body createMonitorRequest true "Настройки точки мониторинга"
+// @Success 201 {object} monitor.Monitor
+// @Failure 400 {object} errorResponse "Некорректный JSON, URL или интервал"
+// @Failure 401 {object} errorResponse "Неверный access token"
+// @Failure 500 {object} errorResponse "Не удалось сохранить точку мониторинга"
+// @Router /api/v1/monitors [post]
 func (h *monitorHandler) create(w http.ResponseWriter, r *http.Request) {
 	user, ok := h.auth.authenticatedUser(w, r)
 	if !ok {
@@ -22,10 +42,7 @@ func (h *monitorHandler) create(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
 	decoder.DisallowUnknownFields()
-	var request struct {
-		URL             string `json:"url"`
-		IntervalSeconds int64  `json:"intervalSeconds"`
-	}
+	var request createMonitorRequest
 	if err := decoder.Decode(&request); err != nil {
 		writeError(w, http.StatusBadRequest, "некорректное тело запроса")
 		return
@@ -46,6 +63,17 @@ func (h *monitorHandler) create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, point)
 }
 
+// list godoc
+// @Summary Получить точки мониторинга текущего пользователя
+// @Description Возвращает массив, в том числе пустой, без пагинации и параметров фильтрации.
+// @ID listMonitors
+// @Tags monitors
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} monitor.Monitor
+// @Failure 401 {object} errorResponse "Неверный access token"
+// @Failure 500 {object} errorResponse "Не удалось загрузить точки мониторинга"
+// @Router /api/v1/monitors [get]
 func (h *monitorHandler) list(w http.ResponseWriter, r *http.Request) {
 	user, ok := h.auth.authenticatedUser(w, r)
 	if !ok {
