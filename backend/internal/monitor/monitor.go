@@ -26,7 +26,7 @@ type Monitor struct {
 	UserID          string    `json:"-"`
 	URL             string    `json:"url"`
 	IntervalSeconds int64     `json:"intervalSeconds"`
-	CreatedAt       time.Time `json:"createdAt"`
+	CreatedAt       time.Time `json:"createdAt" format:"date-time"`
 }
 
 // Repository persists monitoring points and lists them for their owner.
