@@ -1,6 +1,19 @@
 {
-  "description": "Проверка ESLint после редактирования файлов фронтенда.",
+  "description": "Защита закоммиченных миграций и проверка ESLint фронтенда.",
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^(apply_patch|Edit|Write|Bash)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.codex/hooks/protect-migrations.py\"",
+            "timeout": 10,
+            "statusMessage": "Защита закоммиченных миграций"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "^(apply_patch|Edit|Write)$",
