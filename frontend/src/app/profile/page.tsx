@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from "react";
 import { ApiError, avatarUrl } from "@/lib/auth-api";
 import { useAuth } from "@/components/auth-provider";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -91,7 +92,10 @@ export default function ProfilePage() {
   return (
     <main className="profile-page">
       <section className="profile-card" aria-labelledby="profile-title">
-        <Link className="brand" href="/dashboard">Uptime</Link>
+        <div className="card-header">
+          <Link className="brand" href="/dashboard">Uptime</Link>
+          <ThemeSwitcher />
+        </div>
         <p className="eyebrow">Аккаунт</p>
         <h1 id="profile-title">Профиль</h1>
         <p className="profile-copy">Измените отображаемое имя. Email пока доступен только для просмотра.</p>
