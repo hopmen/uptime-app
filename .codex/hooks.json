@@ -1,0 +1,18 @@
+{
+  "description": "Проверка ESLint после редактирования файлов фронтенда.",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "^(apply_patch|Edit|Write)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/frontend-eslint.mjs\"",
+            "timeout": 120,
+            "statusMessage": "Проверка ESLint фронтенда"
+          }
+        ]
+      }
+    ]
+  }
+}
