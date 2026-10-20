@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { ApiError } from "@/lib/auth-api";
 import { useAuth } from "@/components/auth-provider";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 
 type AuthFormProps = {
   mode: "login" | "register";
@@ -56,7 +57,10 @@ export function AuthForm({ mode }: AuthFormProps) {
   return (
     <main className="auth-page">
       <section className="auth-card" aria-labelledby="auth-title">
-        <Link className="brand" href="/dashboard">Uptime</Link>
+        <div className="card-header">
+          <Link className="brand" href="/dashboard">Uptime</Link>
+          <ThemeSwitcher />
+        </div>
         <p className="eyebrow">Мониторинг доступности</p>
         <h1 id="auth-title">{title}</h1>
         <p className="auth-copy">

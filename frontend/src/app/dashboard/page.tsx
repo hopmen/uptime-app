@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { avatarUrl } from "@/lib/auth-api";
 import { useAuth } from "@/components/auth-provider";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 import { MonitorList } from "./monitor-list";
 
 export default function DashboardPage() {
@@ -47,6 +48,7 @@ export default function DashboardPage() {
       <header className="dashboard-header">
         <a className="brand" href="/dashboard">Uptime</a>
         <div className="dashboard-account">
+          <ThemeSwitcher />
           <details className="profile-menu">
             <summary aria-label="Открыть меню профиля">
               {user.avatarUrl ? <img className="profile-avatar" src={avatarUrl(user.avatarUrl)} alt="" /> : <span className="profile-avatar" aria-hidden="true">{(user.name || user.email).charAt(0).toUpperCase()}</span>}
